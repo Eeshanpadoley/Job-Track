@@ -1,0 +1,10 @@
+
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+db.sqlite3
+db_backup_before_migration.sqlite3
+.env
+media/resumes/*
+!media/resumes/.gitkeep

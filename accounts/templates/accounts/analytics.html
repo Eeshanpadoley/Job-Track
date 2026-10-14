@@ -1,0 +1,65 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Analytics{% endblock %}
+{% block breadcrumb %}Analytics{% endblock %}
+{% block page_heading %}Application analytics{% endblock %}
+{% block content %}
+<div class="welcome"><div><div class="eyebrow">DATA-DRIVEN JOB SEARCH</div><h1>Your search, in numbers</h1><p class="sub">Use these insights to understand where your applications are getting traction.</p></div><a class="btn secondary" href="{% url 'export_csv' %}">↓ Export data</a></div>
+<div class="stats">
+  <div class="stat"><div class="stat-top">Total applications<span class="stat-icon">▤</span></div><div class="stat-num">{{ total_applications }}</div><div class="stat-foot">Tracked roles</div></div>
+  <div class="stat"><div class="stat-top">Interview rate<span class="stat-icon">◉</span></div><div class="stat-num">{{ interview_rate }}%</div><div class="stat-foot">Applications converting to interviews</div></div>
+  <div class="stat"><div class="stat-top">Offer rate<span class="stat-icon">✦</span></div><div class="stat-num">{{ offer_rate }}%</div><div class="stat-foot">Offers per application</div></div>
+  <div class="stat"><div class="stat-top">Success rate<span class="stat-icon">↗</span></div><div class="stat-num">{{ success_rate }}%</div><div class="stat-foot">Interviews plus offers</div></div>
+</div>
+<div class="grid-two">
+  <section class="panel"><div class="panel-head"><div><h3>Status breakdown</h3><div class="panel-sub">Where applications stand today</div></div></div>
+    {% if status_summary %}<div class="analytics-chart-wrap"><canvas id="statusChart" aria-label="Application status doughnut chart"></canvas></div><div class="chart-legend-list">{% for item in status_summary %}<div class="bar-row"><span>{{ item.application_status }}</span><div class="bar-track"><div class="bar-fill" style="width:{% widthratio item.count total_applications 100 %}%"></div></div><strong>{{ item.count }}</strong></div>{% endfor %}</div>{% else %}<div class="empty">Add applications to see status analytics.</div>{% endif %}
+  </section>
+  <section class="panel"><div class="panel-head"><div><h3>Application sources</h3><div class="panel-sub">Which platforms you’re using</div></div></div>
+    {% if source_summary %}<div class="analytics-chart-wrap"><canvas id="sourceChart" aria-label="Application source bar chart"></canvas></div><div class="chart-legend-list">{% for item in source_summary %}<div class="bar-row"><span>{{ item.application_source }}</span><div class="bar-track"><div class="bar-fill" style="width:{% widthratio item.count total_applications 100 %}%"></div></div><strong>{{ item.count }}</strong></div>{% endfor %}</div>{% else %}<div class="empty">Source insights will appear here when you add applications.</div>{% endif %}
+  </section>
+</div>
+<div class="grid-two">
+  <section class="panel"><div class="panel-head"><div><h3>Companies you’ve applied to</h3><div class="panel-sub">Top companies by application volume</div></div></div>
+    {% if company_summary %}<div class="analytics-chart-wrap chart-tall"><canvas id="companyChart" aria-label="Applications by company bar chart"></canvas></div>{% else %}<div class="empty">Company analytics will appear here once you start tracking jobs.</div>{% endif %}
+  </section>
+  <section class="panel"><div class="panel-head"><div><h3>Monthly application trend</h3><div class="panel-sub">Applications submitted over time</div></div></div>
+    {% if monthly_summary %}<div class="analytics-chart-wrap chart-tall"><canvas id="monthlyChart" aria-label="Monthly applications line chart"></canvas></div>{% else %}<div class="empty">Add application dates to see monthly trends.</div>{% endif %}
+  </section>
+</div>
+<div class="grid-two">
+  <section class="panel"><div class="panel-head"><div><h3>Most required skills</h3><div class="panel-sub">Skills mentioned in your saved job postings</div></div></div>
+    {% if skill_summary %}<div class="analytics-chart-wrap chart-tall"><canvas id="skillsChart" aria-label="Most required skills bar chart"></canvas></div>{% else %}<div class="empty">Add required skills to your applications to see skill demand.</div>{% endif %}
+  </section>
+  <section class="panel"><div class="panel-head"><div><h3>Source outcomes</h3><div class="panel-sub">Interviews, offers and rejections by source</div></div></div>
+    {% if source_performance %}<div class="analytics-chart-wrap chart-tall"><canvas id="sourcePerformanceChart" aria-label="Job source outcomes grouped bar chart"></canvas></div>{% else %}<div class="empty">Source outcome comparison will appear when applications are added.</div>{% endif %}
+  </section>
+</div>
+{% endblock %}
+{% block head %}
+<style>
+.analytics-chart-wrap{position:relative;width:100%;height:250px;margin:10px 0 4px}.analytics-chart-wrap.chart-tall{height:285px}.chart-legend-list{margin-top:8px}.panel .analytics-chart-wrap canvas{max-width:100%}@media(max-width:720px){.analytics-chart-wrap{height:220px}.analytics-chart-wrap.chart-tall{height:245px}}
+</style>
+{% endblock %}
+{% block scripts %}
+{{ chart_data|json_script:"jobtrack-chart-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const dataNode=document.getElementById('jobtrack-chart-data');
+  if(!dataNode||typeof Chart==='undefined') return;
+  const data=JSON.parse(dataNode.textContent);
+  const palette=['#5267d8','#20a486','#f2a541','#e46d75','#8c69c6','#42a5d5','#78909c','#d17b49','#5c9d64','#bb6bd9'];
+  Chart.defaults.font.family='Inter, system-ui, -apple-system, Segoe UI, sans-serif';
+  Chart.defaults.color='#667085';
+  Chart.defaults.plugins.legend.labels.usePointStyle=true;
+  function chart(id,config){const el=document.getElementById(id);if(el)new Chart(el,config);}
+  const axisBase={beginAtZero:true,ticks:{precision:0},grid:{color:'rgba(148,163,184,.16)'}};
+  chart('statusChart',{type:'doughnut',data:{labels:data.status.labels,datasets:[{data:data.status.values,backgroundColor:palette,borderWidth:2,borderColor:'#fff',hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}});
+  chart('sourceChart',{type:'bar',data:{labels:data.source.labels,datasets:[{label:'Applications',data:data.source.values,backgroundColor:'#5267d8',borderRadius:6,maxBarThickness:34}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:axisBase,y:{grid:{display:false}}}}});
+  chart('companyChart',{type:'bar',data:{labels:data.company.labels,datasets:[{label:'Applications',data:data.company.values,backgroundColor:'#20a486',borderRadius:6,maxBarThickness:34}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:axisBase,y:{grid:{display:false}}}}});
+  chart('monthlyChart',{type:'line',data:{labels:data.monthly.labels,datasets:[{label:'Applications',data:data.monthly.values,borderColor:'#5267d8',backgroundColor:'rgba(82,103,216,.12)',fill:true,tension:.3,pointRadius:4,pointBackgroundColor:'#5267d8'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:axisBase,x:{grid:{display:false}}}}});
+  chart('skillsChart',{type:'bar',data:{labels:data.skills.labels,datasets:[{label:'Mentions in postings',data:data.skills.values,backgroundColor:'#8c69c6',borderRadius:6,maxBarThickness:30}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:axisBase,y:{grid:{display:false}}}}});
+  chart('sourcePerformanceChart',{type:'bar',data:{labels:data.source_performance.labels,datasets:[{label:'Interviews',data:data.source_performance.interviews,backgroundColor:'#5267d8',borderRadius:4},{label:'Offers',data:data.source_performance.offers,backgroundColor:'#20a486',borderRadius:4},{label:'Rejections',data:data.source_performance.rejections,backgroundColor:'#e46d75',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:axisBase,x:{grid:{display:false}}}}});
+})();
+</script>
+{% endblock %}
